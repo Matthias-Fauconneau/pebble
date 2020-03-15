@@ -1,3 +1,7 @@
+ifndef BUILD_DIR
+$(error BUILD_DIR is not set)
+endif
+
 .PHONY: kernel_x86_64 efiloader clean
 
 kernel_x86_64: efiloader
@@ -6,7 +10,7 @@ kernel_x86_64: efiloader
 
 efiloader:
 	cargo xbuild --target=x86_64-unknown-uefi --manifest-path efiloader/Cargo.toml
-	cp target/x86_64-unknown-uefi/debug/efiloader.efi $(BUILD_DIR)/fat/efiloader.efi
+	cp $(shell cargo metadata --format-version 1 | jq -r '.target_directory')/x86_64-unknown-uefi/debug/efiloader.efi $(BUILD_DIR)/fat/efiloader.efi
 
 clean:
 	cargo clean
