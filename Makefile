@@ -1,5 +1,6 @@
 export ARCH ?= x86_64
 export BUILD_DIR ?= $(abspath ./build)
+export CARGO_TARGET_DIR ?= $(shell cargo metadata --format-version 1 --manifest-path kernel/Cargo.toml | jq -r '.target_directory')
 
 IMAGE_NAME ?= pebble.img
 RUST_GDB_INSTALL_PATH ?= ~/bin/rust-gdb/bin
@@ -44,11 +45,11 @@ kernel:
 
 test_process:
 	cargo xbuild --target=test_process/x86_64-pebble-userspace.json --manifest-path test_process/Cargo.toml
-	cp test_process/target/x86_64-pebble-userspace/debug/test_process $(BUILD_DIR)/fat/test_process.elf
+	cp $(CARGO_TARGET_DIR)/x86_64-pebble-userspace/debug/test_process $(BUILD_DIR)/fat/test_process.elf
 
 simple_fb:
 	cargo xbuild --target=drivers/x86_64-pebble-userspace.json --manifest-path drivers/simple_fb/Cargo.toml
-	cp drivers/target/x86_64-pebble-userspace/debug/simple_fb $(BUILD_DIR)/fat/simple_fb.elf
+	cp $(CARGO_TARGET_DIR)/x86_64-pebble-userspace/debug/simple_fb $(BUILD_DIR)/fat/simple_fb.elf
 
 clean:
 	cd drivers && cargo clean --all

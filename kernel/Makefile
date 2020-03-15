@@ -2,8 +2,6 @@ ifndef BUILD_DIR
 $(error BUILD_DIR is not set)
 endif
 
-CARGO_TARGET_DIR = $(shell cargo metadata --format-version 1 | jq -r '.target_directory')
-
 .PHONY: kernel_x86_64 efiloader clean
 
 kernel_x86_64: efiloader
