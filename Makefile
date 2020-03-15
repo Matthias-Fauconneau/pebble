@@ -5,18 +5,33 @@ export CARGO_TARGET_DIR ?= $(shell cargo metadata --format-version 1 --manifest-
 IMAGE_NAME ?= pebble.img
 RUST_GDB_INSTALL_PATH ?= ~/bin/rust-gdb/bin
 
-QEMU_COMMON_FLAGS = -cpu max,vmware-cpuid-freq,invtsc \
-					-machine q35 \
-					-smp 2 \
-					-m 512M \
-					-usb \
-					-device usb-ehci,id=ehci,bus=pcie.0 \
-					--no-reboot \
-					--no-shutdown \
-					-drive if=pflash,format=raw,file=ovmf/OVMF_CODE.fd,readonly \
-					-drive if=pflash,format=raw,file=ovmf/OVMF_VARS.fd \
-					-drive if=ide,format=raw,file=$(IMAGE_NAME) \
-					-net none
+#QEMU_COMMON_FLAGS = -cpu max,vmware-cpuid-freq,invtsc \
+# QEMU_COMMON_FLAGS = \
+# -nodefaults
+# -cpu max,vmware-cpuid-freq \
+# -machine q35 \
+# -smp 2 \
+# -m 512M \
+# -usb \
+# -device usb-ehci,id=ehci,bus=pcie.0 \
+# --no-reboot \
+# --no-shutdown \
+# -drive if=pflash,format=raw,file=ovmf/OVMF_CODE.fd,readonly \
+# -drive if=pflash,format=raw,file=ovmf/OVMF_VARS.fd \
+# -drive if=ide,format=raw,file=$(IMAGE_NAME) \
+# -net none \
+# -nographic
+
+QEMU_COMMON_FLAGS = \
+-nodefaults -serial stdio -device isa-debug-exit,iobase=0xf4,iosize=0x04 -vga std \
+-machine q35 --accel tcg,thread=single -smp 3 -m 512M -cpu qemu64,+xsave \
+-drive if=pflash,format=raw,file=/usr/share/edk2-ovmf/OVMF_CODE.fd,readonly=on\
+-drive if=pflash,format=raw,file=/var/tmp/pebble/OVMF_VARS.fd\
+-drive if=ide,format=raw,file=$(IMAGE_NAME)
+
+#-drive if=pflash,format=raw,file=/usr/share/edk2-ovmf/OVMF_VARS.fd,readonly=on\
+#-drive format=raw,file=fat:rw:/var/tmp/cargo/x86_64-unknown-uefi/debug/esp
+fs0:\efiloader.efi kernel=kernel.elf image.simple_fb=simple_fb.elf fb.width=800 fb.height=600
 
 .PHONY: image_x86_64 prepare kernel test_process simple_fb clean qemu gdb update fmt test site
 .DEFAULT_GOAL := image_$(ARCH)
