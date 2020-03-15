@@ -1,14 +1,1 @@
-**/target/
-**/*.rs.bk
-
-/build/
-/iso/
-*.img
-*.iso
-*.o
-*.bin
-*.elf
-
-# These are built on CI and should never be committed
-/doc_target/
-/docs/
+Cargo.lock
