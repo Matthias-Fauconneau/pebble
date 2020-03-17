@@ -1,6 +1,10 @@
 use crate::LoaderError;
-use boot_info_x86_64::{kernel_map, LoadedImage, Segment, MAX_CAPABILITY_STREAM_LENGTH};
 use core::{ptr, slice, str};
+use hal::{
+    boot_info::{LoadedImage, Segment, MAX_CAPABILITY_STREAM_LENGTH},
+    memory::{Flags, FrameAllocator, FrameSize, Mapper, Page, PhysicalAddress, Size4KiB, VirtualAddress},
+};
+use hal_x86_64::kernel_map;
 use mer::{
     program::{ProgramHeader, SegmentType},
     Elf,
@@ -14,16 +18,6 @@ use uefi::{
     table::boot::{AllocateType, BootServices, MemoryType},
     Handle,
 };
-use x86_64::memory::{
-    EntryFlags,
-    FrameAllocator,
-    FrameSize,
-    Mapper,
-    Page,
-    PhysicalAddress,
-    Size4KiB,
-    VirtualAddress,
-};
 
 pub struct KernelInfo {
     pub entry_point: usize,
@@ -35,15 +29,16 @@ pub struct KernelInfo {
     pub next_safe_address: VirtualAddress,
 }
 
-pub fn load_kernel<A>(
+pub fn load_kernel<A, M>(
     boot_services: &BootServices,
     volume_handle: Handle,
     path: &str,
-    mapper: &mut Mapper,
+    mapper: &mut M,
     allocator: &A,
 ) -> Result<KernelInfo, LoaderError>
 where
-    A: FrameAllocator,
+    A: FrameAllocator<Size4KiB>,
+    M: Mapper<Size4KiB, A>,
 {
     let (elf, pool_addr) = load_elf(boot_services, volume_handle, path)?;
     let entry_point = elf.entry_point();
@@ -53,27 +48,25 @@ where
     for segment in elf.segments() {
         match segment.segment_type() {
             SegmentType::Load if segment.mem_size > 0 => {
-                let segment = load_segment(boot_services, segment, crate::KERNEL_MEMORY_TYPE, &elf)?;
-
-                let mut flags = EntryFlags::empty();
-                if segment.writable {
-                    flags |= EntryFlags::WRITABLE;
-                }
-                if !segment.executable {
-                    flags |= EntryFlags::NO_EXECUTE;
-                }
+                let segment = load_segment(boot_services, segment, crate::KERNEL_MEMORY_TYPE, &elf, false)?;
 
                 /*
                  * If this segment loads past `next_safe_address`, update it.
                  */
                 if (segment.virtual_address + segment.size) > next_safe_address {
                     next_safe_address =
-                        (Page::<Size4KiB>::contains(segment.virtual_address + segment.size) + 1).start_address;
+                        (Page::<Size4KiB>::contains(segment.virtual_address + segment.size) + 1).start;
                 }
 
                 assert!(segment.size % Size4KiB::SIZE == 0);
                 mapper
-                    .map_area_to(segment.virtual_address, segment.physical_address, segment.size, flags, allocator)
+                    .map_area(
+                        segment.virtual_address,
+                        segment.physical_address,
+                        segment.size,
+                        segment.flags,
+                        allocator,
+                    )
                     .unwrap();
             }
 
@@ -91,8 +84,8 @@ where
         Some(symbol) => VirtualAddress::new(symbol.value as usize),
         None => panic!("Kernel does not have a '_guard_page' symbol!"),
     };
-    assert!(guard_page_address.is_page_aligned::<Size4KiB>());
-    mapper.unmap(Page::starts_with(guard_page_address));
+    assert!(guard_page_address.is_aligned(Size4KiB::SIZE));
+    mapper.unmap::<Size4KiB>(Page::starts_with(guard_page_address));
 
     boot_services.free_pool(pool_addr).unwrap_success();
     Ok(KernelInfo { entry_point, stack_top, next_safe_address })
@@ -110,7 +103,7 @@ pub fn load_image(
     image_data.entry_point = VirtualAddress::new(elf.entry_point());
 
     let name_bytes = name.as_bytes();
-    if name_bytes.len() > boot_info_x86_64::MAX_IMAGE_NAME_LENGTH {
+    if name_bytes.len() > hal::boot_info::MAX_IMAGE_NAME_LENGTH {
         panic!("Image's name is too long: '{}'!", name);
     }
     image_data.name_length = name_bytes.len() as u8;
@@ -119,7 +112,7 @@ pub fn load_image(
     for segment in elf.segments() {
         match segment.segment_type() {
             SegmentType::Load if segment.mem_size > 0 => {
-                let segment = load_segment(boot_services, segment, crate::IMAGE_MEMORY_TYPE, &elf)?;
+                let segment = load_segment(boot_services, segment, crate::IMAGE_MEMORY_TYPE, &elf, true)?;
                 match image_data.add_segment(segment) {
                     Ok(()) => (),
                     Err(()) => panic!("Image at '{}' has too many load segments!", path),
@@ -211,6 +204,7 @@ fn load_segment(
     segment: ProgramHeader,
     memory_type: MemoryType,
     elf: &Elf,
+    user_accessible: bool,
 ) -> Result<Segment, LoaderError> {
     assert!((segment.mem_size as usize) % Size4KiB::SIZE == 0);
 
@@ -244,7 +238,11 @@ fn load_segment(
         physical_address: PhysicalAddress::new(physical_address as usize).unwrap(),
         virtual_address: VirtualAddress::new(segment.virtual_address as usize),
         size: num_frames * Size4KiB::SIZE,
-        writable: segment.is_writable(),
-        executable: segment.is_executable(),
+        flags: Flags {
+            writable: segment.is_writable(),
+            executable: segment.is_executable(),
+            user_accessible,
+            ..Default::default()
+        },
     })
 }

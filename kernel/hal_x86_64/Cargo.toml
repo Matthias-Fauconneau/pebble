@@ -1,8 +1,10 @@
 [package]
-name = "boot_info_x86_64"
+name = "hal_x86_64"
 version = "0.1.0"
 authors = ["Isaac Woods"]
 edition = "2018"
 
 [dependencies]
-x86_64 = { path = "../../lib/x86_64" }
+hal = { path = "../hal" }
+bitflags = "1"
+bit_field = "0.10"

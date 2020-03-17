@@ -13,7 +13,7 @@
 //! This leaves us 382GiB for the physical memory map, which should be sufficient for any system I can imagine us
 //! running on (famous last words).
 
-use x86_64::memory::{PhysicalAddress, VirtualAddress, MEBIBYTES_TO_BYTES};
+use hal::memory::{PhysicalAddress, VirtualAddress, MEBIBYTES_TO_BYTES};
 
 pub const KERNEL_P4_ENTRY: usize = 511;
 pub const KERNEL_ADDRESS_SPACE_START: VirtualAddress = VirtualAddress::new(0xffff_ff80_0000_0000);
