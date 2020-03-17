@@ -1,18 +1,9 @@
 #!/bin/fish
-function update
- cargo update --manifest-path kernel/Cargo.toml
- cargo update --manifest-path lib/libpebble/Cargo.toml
- cargo update --manifest-path lib/mer/Cargo.toml
- cargo update --manifest-path lib/pebble_util/Cargo.toml
- cargo update --manifest-path lib/x86_64/Cargo.toml
-end
 set CARGO_TARGET_DIR (cargo metadata --format-version 1 --manifest-path kernel/Cargo.toml | jq -r .target_directory)
 set ESP $CARGO_TARGET_DIR/ESP
 set ARCH x86_64
+export XBUILD_SYSROOT_PATH=$CARGO_TARGET_DIR/sysroot
 cargo xbuild --target=$ARCH-unknown-uefi --manifest-path kernel/efiloader/Cargo.toml
-#cargo test --all-features --manifest-path lib/pebble_util/Cargo.toml
-#cargo test --all-features --manifest-path lib/x86_64/Cargo.toml
-#cargo test --all-features --manifest-path kernel/Cargo.toml
 cargo xbuild --target=kernel/$ARCH-kernel.json --manifest-path kernel/Cargo.toml --features arch_$ARCH
 cargo xbuild --target=drivers/x86_64-pebble-userspace.json --manifest-path drivers/simple_fb/Cargo.toml
 cargo xbuild --target=test_process/x86_64-pebble-userspace.json --manifest-path test_process/Cargo.toml
