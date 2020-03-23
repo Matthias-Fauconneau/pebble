@@ -20,7 +20,6 @@
 extern crate alloc;
 
 mod heap_allocator;
-mod mailbox;
 mod object;
 // mod per_cpu;
 // mod scheduler;
@@ -30,7 +29,7 @@ use crate::heap_allocator::LockedHoleAllocator;
 use cfg_if::cfg_if;
 use core::panic::PanicInfo;
 use hal::boot_info::BootInfo;
-use libpebble::{syscall::system_object::FramebufferSystemObjectInfo, KernelObjectId};
+use libpebble::syscall::system_object::FramebufferSystemObjectInfo;
 use log::{error, info};
 
 cfg_if! {
