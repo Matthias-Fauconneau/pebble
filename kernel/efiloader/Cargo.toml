@@ -12,3 +12,6 @@ uefi = { path = "../../lib/uefi-rs" }
 ucs2 = { path = "../../lib/ucs2-rs" }
 mer = { path = "../../lib/mer" }
 spin = "0.5"
+
+[package.metadata.cargo-xbuild]
+sysroot_path = "$CARGO_TARGET_DIR/target/sysroot" # XBUILD_SYSROOT_PATH
