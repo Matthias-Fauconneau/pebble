@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(incomplete_features)]
 #![feature(asm, decl_macro, const_generics)]
 
 pub mod caps;
