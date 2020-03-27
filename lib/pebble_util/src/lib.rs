@@ -1,6 +1,6 @@
 #![no_std]
 #![allow(incomplete_features)]
-#![feature(const_generics, decl_macro, maybe_uninit_ref, type_ascription)]
+#![feature(const_generics, decl_macro, maybe_uninit_ref, type_ascription, core_intrinsics)]
 
 #[cfg(test)]
 #[macro_use]

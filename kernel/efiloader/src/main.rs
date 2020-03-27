@@ -15,7 +15,6 @@ use hal::{
     memory::{Flags, FrameAllocator, FrameSize, Page, PageTable, PhysicalAddress, Size4KiB, VirtualAddress},
 };
 use hal_x86_64::paging::PageTableImpl;
-use image::KernelInfo;
 use log::{error, info};
 use uefi::{
     prelude::*,
@@ -179,13 +178,9 @@ fn main(image_handle: Handle, system_table: SystemTable<Boot>) -> Result<!, Load
         .expect_success("Failed to exit boot services");
     process_memory_map(memory_map, boot_info, &mut page_table, &allocator)?;
 
-    jump_to_kernel(page_table, kernel_info, boot_info_virtual_address)
-}
-
-fn jump_to_kernel<P>(page_table: P, kernel_info: KernelInfo, boot_info_virtual_address: VirtualAddress) -> !
-where
-    P: PageTable<Size4KiB, BootFrameAllocator>,
-{
+    /*
+     * Jump into the kernel!
+     */
     unsafe {
         info!("Switching to new page tables");
         /*
@@ -226,7 +221,7 @@ fn process_memory_map<A, P>(
 ) -> Result<(), LoaderError>
 where
     A: FrameAllocator<Size4KiB>,
-    P: PageTable<Size4KiB, A>,
+    P: PageTable<Size4KiB>,
 {
     use hal::boot_info::{MemoryMapEntry, MemoryType as BootInfoMemoryType};
 
@@ -340,7 +335,7 @@ fn allocate_and_map_heap<A, P>(
 ) -> Result<(), LoaderError>
 where
     A: FrameAllocator<Size4KiB>,
-    P: PageTable<Size4KiB, A>,
+    P: PageTable<Size4KiB>,
 {
     assert!(heap_size % Size4KiB::SIZE == 0);
     let frames_needed = Size4KiB::frames_needed(heap_size);
